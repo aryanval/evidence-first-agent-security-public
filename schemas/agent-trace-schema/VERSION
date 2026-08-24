@@ -1,0 +1,66 @@
+# Agent Evidence Envelope — version pin
+#
+# This file is the single place the envelope states what it is built against.
+# Vendoring repos copy this file with the rest of the folder and echo
+# envelope_version in their README. Parseable as key=value; '#' starts a comment.
+
+envelope_version=0.2
+schema_file=agent-trace-schema.json
+supported_input_versions=0.1,0.2
+
+# --- OpenTelemetry substrate -------------------------------------------------
+# The envelope does not define an execution trace format. It rides OpenTelemetry
+# GenAI spans and adds the eight security properties OTel does not itself prove.
+
+otel_semconv_version=1.44.0
+otel_semconv_stability=development
+otel_genai_stability=development
+otel_semconv_source=https://github.com/open-telemetry/semantic-conventions/releases
+
+# The GenAI conventions LEFT the core repository. They now live in their own
+# repo, which was created 2026-05-05 and has cut NO release; its docs reference
+# core semconv v1.44.0. So the GenAI half of this pin has no version number to
+# cite at all, only a commit date, and that is itself the honest state of the art.
+otel_genai_source=https://github.com/open-telemetry/semantic-conventions-genai
+otel_genai_version=unreleased
+otel_genai_head_pushed=2026-08-21
+otel_genai_repo_created=2026-05-05
+
+# Operation names this envelope maps onto (gen_ai.operation.name). The first
+# group is what the pinned conventions define; the second group is modelled as
+# envelope kinds because the portfolio needs them, and their OTel span names are
+# NOT pinned — they may land under different names, or not at all.
+otel_operations_pinned=chat,generate_content,text_completion,embeddings,create_agent,invoke_agent,execute_tool
+otel_operations_unpinned=retrieval,plan,memory
+
+# --- Provenance of this pin --------------------------------------------------
+# The pin is itself evidence, and it is the weak kind. Recorded from the
+# maintainer's working notes; not re-fetched from upstream at pin time.
+# Re-verify against otel_semconv_source before citing this version anywhere
+# that matters, and bump pin_evidence_class to OBSERVED when you do.
+
+pinned_on=2026-08-22
+pin_evidence_class=OBSERVED
+pin_verified_against_upstream=true
+pin_verified_how=live fetch of the upstream repositories via the GitHub API on 2026-08-22
+
+# WHAT THIS RE-PIN COST US, recorded rather than quietly corrected.
+#
+# The previous pin said otel_semconv_version=1.37.0 with
+# pin_evidence_class=CLAIMED and pin_verified_against_upstream=false -- a value
+# taken from working notes and never checked. When it WAS checked, it was wrong
+# in a way prose could not have surfaced: the GenAI conventions had moved out of
+# the pinned repository three and a half months earlier, and the core version had
+# advanced seven minor releases.
+#
+# This contract's own doctrine is that a self-reported claim is the weakest class
+# of evidence and must be labelled as such. That rule fired on the contract
+# itself, and the label is what made the staleness discoverable at all. The
+# finding is kept in the writeup for that reason: the evidence-class discipline
+# is not decorative if it convicts its own author.
+
+# The GenAI conventions are pre-stable. Attribute names, operation names and
+# span shapes may be renamed or removed between semconv releases without a
+# major-version signal. When re-pinning, diff the operation list above and the
+# attribute mapping table in SPEC.md, then bump envelope_version if any
+# envelope-visible field changed meaning.

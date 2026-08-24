@@ -1,0 +1,488 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aryanval/agent-trace-schema/v0.2/agent-trace-schema.json",
+  "title": "Agent Evidence Envelope",
+  "description": "Line-delimited (JSONL) evidence contract shared across the agent-security portfolio. One JSON object per line; each object is the sidecar record for one OpenTelemetry GenAI span (or for one externally observed side effect that has no span). The envelope carries the eight security properties OTel does not itself prove. Producers append; consumers tail. See SPEC.md; OTel convention pin is in VERSION.",
+  "type": "object",
+  "required": ["schema_version", "ts", "producer", "run_id", "span_id", "kind"],
+  "properties": {
+    "schema_version": {
+      "enum": ["0.1", "0.2"],
+      "description": "Contract version this line speaks. 0.1 lines remain valid under this schema; see the 0.1 -> 0.2 delta in SPEC.md."
+    },
+    "ts": { "type": "string", "format": "date-time", "description": "RFC3339 UTC timestamp of the event." },
+    "producer": { "type": "string", "description": "Emitting component, e.g. 'agent-attack-range', 'valkyrie-edr', 'mcp-sidecar'. Legacy identifier; in 0.2 the authoritative answer to 'who says so' is observer_identity." },
+    "evidence": {
+      "type": "string",
+      "enum": ["claimed", "observed"],
+      "description": "DEPRECATED in 0.2, retained for 0.1 compatibility and dual-writing. 'claimed' maps to evidence_class CLAIMED, 'observed' to OBSERVED. Required on 0.1 lines. If both are present on a 0.2 line they MUST agree (rule E-6)."
+    },
+    "evidence_class": {
+      "$ref": "#/$defs/evidence_class",
+      "description": "Strength of the evidence supporting THIS record. Required on 0.2 lines."
+    },
+    "run_id": { "type": "string", "description": "Stable id for one agent run. Ties an event stream into a causal tree." },
+    "span_id": { "type": "string", "description": "Id for this event/step within the run. Unique per (run_id, span_id) (rule E-7)." },
+    "parent_span_id": { "type": ["string", "null"], "description": "Parent step, or null at run root. Encodes causality and A2A delegation depth. On 0.2 lines a non-null value requires causal_link (rule E-2)." },
+    "otel": {
+      "type": "object",
+      "description": "Binding to the OpenTelemetry span this record envelopes. Present when the event originated as a span; absent for side effects witnessed outside any instrumented process (a kernel event, a cloud audit row). trace_id/span_id are the join key between this sidecar stream and the OTLP stream.",
+      "properties": {
+        "trace_id": { "type": ["string", "null"], "pattern": "^[0-9a-f]{32}$", "description": "W3C trace id, 16 bytes lowercase hex." },
+        "span_id": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$", "description": "W3C span id, 8 bytes lowercase hex." },
+        "parent_span_id": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$" },
+        "span_name": { "type": ["string", "null"] },
+        "operation_name": {
+          "type": ["string", "null"],
+          "description": "gen_ai.operation.name as emitted, e.g. 'invoke_agent', 'chat', 'execute_tool'. Not enum-constrained: the GenAI conventions are pre-stable and may add or rename operations. See VERSION."
+        },
+        "semconv_version": { "type": ["string", "null"], "description": "Semantic-convention version the emitter was built against, e.g. '1.37.0'. Defaults to the VERSION pin when absent." }
+      },
+      "additionalProperties": true
+    },
+    "agent": {
+      "type": "object",
+      "description": "The agent this event is about. Chain nodes 'agent identity' and 'runtime instance'.",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "framework": { "type": "string", "description": "e.g. 'langgraph', 'bedrock-agentcore', 'claude-code', 'mcp-server'." },
+        "identity_ref": { "type": ["string", "null"], "description": "Pointer to the runtime identity: an identity-provider subject, an IAM role ARN, or a service principal id. Consumed by the capability-graph stage." },
+        "instance_id": { "type": ["string", "null"], "description": "Chain node 'runtime instance': the specific process/container/session this identity was running in. Distinguishes two concurrent runs of the same identity; without it, identity-to-action attribution is ambiguous." }
+      }
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "agent_run_start", "agent_run_end",
+        "model_call", "tool_call", "delegation",
+        "retrieval", "plan", "memory",
+        "token_event", "process_spawn", "network_egress", "file_write",
+        "security_finding"
+      ],
+      "description": "Event kind. 0.2 adds retrieval, plan and memory to cover the GenAI span vocabulary; all 0.1 kinds are unchanged."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["success", "failure", "blocked", "unknown"],
+      "description": "Result of the action, where applicable."
+    },
+    "observer_identity": {
+      "$ref": "#/$defs/observer_identity",
+      "description": "Envelope property 1: who is asserting this record. Required on 0.2 lines."
+    },
+    "source_trust_domain": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Envelope property 3: the trust boundary the observer sits inside, e.g. 'agent-process', 'host-kernel', 'tool-gateway', 'identity-provider', 'cloud-control-plane', 'range-harness'. Two records corroborate each other only if their source_trust_domain values differ. Required on 0.2 lines. Not enum-constrained: domains are deployment-specific; the recommended vocabulary is in SPEC.md."
+    },
+    "causal_link": {
+      "$ref": "#/$defs/causal_link",
+      "description": "Envelope property 4: the parent edge, and the evidence class of the EDGE itself (which may be weaker than the class of either node it joins)."
+    },
+    "reconstruction_method": {
+      "$ref": "#/$defs/reconstruction_method",
+      "description": "Envelope property 5: how this record was arrived at when it was not directly recorded. Required when evidence_class is INFERRED."
+    },
+    "ground_truth_label": {
+      "$ref": "#/$defs/ground_truth_label",
+      "description": "Envelope property 6: the harness's known-answer label. Only a producer that controls the scenario may set it (rule E-4); a detector MUST NOT."
+    },
+    "integrity_status": {
+      "$ref": "#/$defs/integrity_status",
+      "description": "Envelope property 7: whether origin and post-generation integrity of this record can be verified. Required when evidence_class is ATTESTED."
+    },
+    "declared_blind_spots": {
+      "type": "array",
+      "description": "Envelope property 8: what this observer knows it cannot see. An empty array is not 'unknown' - it is the positive claim 'no known blind spots' and must be defensible. Every producer MUST declare on its first line per run (rule E-3).",
+      "minItems": 0,
+      "items": { "$ref": "#/$defs/blind_spot" }
+    },
+    "data": {
+      "type": "object",
+      "description": "Kind-specific payload. Shapes below are the required minimum; producers may add fields.",
+      "additionalProperties": true
+    },
+    "ext": {
+      "type": "object",
+      "description": "Producer-specific extensions that are not part of the portable contract.",
+      "additionalProperties": true
+    }
+  },
+
+  "$defs": {
+    "evidence_class": {
+      "type": "string",
+      "enum": ["CLAIMED", "OBSERVED", "AUTHORITATIVE", "ATTESTED", "INFERRED"],
+      "description": "CLAIMED: the agent or framework asserts it. OBSERVED: an independent sensor sees behaviour consistent with the claim. AUTHORITATIVE: the system owning the resource records the state change. ATTESTED: an observer cryptographically binds its identity to the record. INFERRED: reconstructed from correlation, not directly recorded. The first four are not a total order - ATTESTED describes integrity of the record, the others describe the origin of the fact; a record can be ATTESTED and still be a claim, in which case emit CLAIMED with integrity_status set."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^(sha256|sha512|blake3):[0-9a-f]{4,128}$",
+      "description": "Algorithm-prefixed hex digest. Raw content never travels in the trace."
+    },
+    "observer_identity": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "type": "string", "description": "Stable identifier for the observer instance, e.g. 'valkyrie-edr@host-7'." },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "framework_sdk", "agent_sidecar", "tool_gateway", "host_sensor", "kernel_sensor",
+            "network_proxy", "identity_provider", "cloud_audit", "static_analyzer",
+            "range_harness", "analysis_pipeline", "human_analyst"
+          ]
+        },
+        "version": { "type": ["string", "null"] },
+        "key_id": { "type": ["string", "null"], "description": "Signing key identity, when this observer attests its records." }
+      },
+      "additionalProperties": true
+    },
+    "causal_link": {
+      "type": "object",
+      "required": ["edge", "evidence_class"],
+      "properties": {
+        "parent_span_id": { "type": ["string", "null"], "description": "MUST equal the top-level parent_span_id when both are present (rule E-1)." },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "principal_to_delegation",
+            "delegation_to_agent_identity",
+            "agent_identity_to_runtime_instance",
+            "runtime_instance_to_input",
+            "input_to_authorization",
+            "authorization_to_tool",
+            "tool_to_side_effect",
+            "intra_run_sequence",
+            "unspecified"
+          ],
+          "description": "Which edge of the action-provenance chain this parent link represents. 'intra_run_sequence' is ordering within one stage, not a chain edge. 'unspecified' is what 0.1 lines upgrade to."
+        },
+        "evidence_class": { "$ref": "#/$defs/evidence_class", "description": "Evidence class of the EDGE. A CLAIMED edge between two AUTHORITATIVE nodes still leaves the causal claim unproven." },
+        "reconstruction_method": { "$ref": "#/$defs/reconstruction_method" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "corroborated_by": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "span_ids of records from a DIFFERENT source_trust_domain that support this edge."
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": { "properties": { "evidence_class": { "const": "INFERRED" } }, "required": ["evidence_class"] },
+          "then": { "required": ["reconstruction_method"] }
+        }
+      ]
+    },
+    "reconstruction_method": {
+      "type": "object",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "direct_record",
+            "propagated_context",
+            "correlated_identifier",
+            "time_window",
+            "heuristic_match",
+            "model_assisted",
+            "manual"
+          ],
+          "description": "direct_record: the fact was recorded as it happened. propagated_context: joined by trace/baggage context carried across the boundary. correlated_identifier: joined by a shared id (pid, request id, token jti). time_window: stitched by proximity in time. heuristic_match: joined by a rule over attributes. model_assisted: joined by a model - never yields better than INFERRED, and the model is the subject of measurement, never the arbiter. manual: an analyst asserted it."
+        },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "window_ms": { "type": ["integer", "null"], "description": "Correlation window, for time_window." },
+        "notes": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "ground_truth_label": {
+      "type": "object",
+      "required": ["value", "labeler"],
+      "properties": {
+        "value": { "type": "string", "enum": ["benign", "attack", "ambiguous", "not_labeled"] },
+        "labeler": { "type": "string", "description": "The harness that controls the scenario, e.g. 'agent-attack-range'." },
+        "scenario_id": { "type": ["string", "null"] },
+        "expected_outcome": { "type": ["string", "null"], "enum": ["success", "failure", "blocked", "unknown", null] },
+        "atlas_technique": { "type": ["string", "null"], "description": "MITRE ATLAS technique id, e.g. 'AML.T0051'." },
+        "notes": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "integrity_status": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["unprotected", "hash_chained", "signed", "signed_verified", "verification_failed", "tamper_suspected", "unknown"],
+          "description": "'signed' = a signature exists. 'signed_verified' = a consumer checked it and it held; only a verifier may write this."
+        },
+        "algorithm": { "type": ["string", "null"], "description": "e.g. 'ed25519', 'sha256-chain'." },
+        "key_id": { "type": ["string", "null"] },
+        "signature_ref": { "type": ["string", "null"], "description": "Pointer to the detached signature or transparency-log entry. Signatures do not travel inline." },
+        "prev_digest": { "$ref": "#/$defs/digest_or_null", "description": "Digest of this observer's previous record in the run, for hash chaining. Gaps in the chain are detectable record loss." },
+        "verified_at": { "type": ["string", "null"], "format": "date-time" },
+        "verified_by": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "digest_or_null": {
+      "anyOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "blind_spot": {
+      "type": "object",
+      "required": ["area"],
+      "properties": {
+        "area": {
+          "type": "string",
+          "description": "Short token for what is not visible. Recommended vocabulary in SPEC.md, e.g. 'no_kernel_visibility', 'tls_payload_opaque', 'no_cloud_audit_access', 'sampling_enabled', 'redacted_arguments', 'pre_instrumentation_gap', 'no_child_process_attribution', 'cross_host_gap'."
+        },
+        "reason": { "type": ["string", "null"] },
+        "impact": {
+          "type": ["string", "null"],
+          "enum": ["none", "partial", "total", null],
+          "description": "How much of the named area is lost: 'partial' = degraded but present, 'total' = nothing in this area is captured."
+        },
+        "affects_edges": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Chain edges this blind spot degrades, using the causal_link.edge vocabulary."
+        }
+      },
+      "additionalProperties": true
+    },
+    "authoritative_ref": {
+      "type": "object",
+      "description": "Pointer to the record kept by the system that owns the resource. Required in data for AUTHORITATIVE lines (rule E-5): if you claim the resource owner recorded it, name the record.",
+      "required": ["system", "record_id"],
+      "properties": {
+        "system": { "type": "string", "description": "e.g. 'aws-cloudtrail', 'entra-signin-logs', 'github-audit'." },
+        "record_id": { "type": "string", "description": "Event id within that system." },
+        "resource": { "type": ["string", "null"], "description": "The resource whose state changed, e.g. an ARN." },
+        "retrieved_at": { "type": ["string", "null"], "format": "date-time" },
+        "lag_ms": { "type": ["integer", "null"], "description": "Delay between the side effect and the record being readable. Non-trivial lag is why AUTHORITATIVE evidence often arrives after a detection had to fire." }
+      },
+      "additionalProperties": true
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "const": "0.1" } }, "required": ["schema_version"] },
+      "then": { "required": ["evidence"] }
+    },
+    {
+      "if": { "properties": { "schema_version": { "const": "0.2" } }, "required": ["schema_version"] },
+      "then": { "required": ["evidence_class", "observer_identity", "source_trust_domain"] }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "schema_version": { "const": "0.2" } }, "required": ["schema_version"] },
+          { "properties": { "parent_span_id": { "type": "string" } }, "required": ["parent_span_id"] }
+        ]
+      },
+      "then": { "required": ["causal_link"] }
+    },
+    {
+      "if": { "properties": { "evidence_class": { "const": "INFERRED" } }, "required": ["evidence_class"] },
+      "then": { "required": ["reconstruction_method"] }
+    },
+    {
+      "if": { "properties": { "evidence_class": { "const": "ATTESTED" } }, "required": ["evidence_class"] },
+      "then": {
+        "required": ["integrity_status"],
+        "properties": {
+          "integrity_status": {
+            "properties": { "status": { "enum": ["signed", "signed_verified"] } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "evidence_class": { "const": "AUTHORITATIVE" } }, "required": ["evidence_class"] },
+      "then": {
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "required": ["authoritative_ref"],
+            "properties": { "authoritative_ref": { "$ref": "#/$defs/authoritative_ref" } }
+          }
+        }
+      }
+    },
+
+    {
+      "if": { "properties": { "kind": { "const": "agent_run_start" } }, "required": ["kind"] },
+      "then": { "properties": { "data": {
+        "properties": {
+          "principal": {
+            "type": "object",
+            "description": "Chain node 'principal': the human or system on whose authority this run happens. Absent means the run has no recoverable initiator - itself a finding.",
+            "required": ["id", "type"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string", "enum": ["human", "service", "scheduled", "agent", "unknown"] },
+              "auth_method": { "type": ["string", "null"], "description": "How the principal was authenticated, e.g. 'oidc', 'mtls', 'none'." },
+              "delegation_depth": { "type": ["integer", "null"], "minimum": 0, "description": "Hops between the principal and this agent. 0 = the principal invoked it directly." }
+            },
+            "additionalProperties": true
+          },
+          "task_digest": { "$ref": "#/$defs/digest_or_null" }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "model_call" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["model"],
+        "properties": {
+          "model": { "type": "string" },
+          "endpoint": { "type": ["string", "null"], "description": "Host/SNI of the model API, when known." },
+          "prompt_digest": { "$ref": "#/$defs/digest_or_null", "description": "Hash of the prompt. Never the raw prompt." },
+          "input_tokens": { "type": ["integer", "null"] },
+          "output_tokens": { "type": ["integer", "null"] }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "tool_call" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["tool", "args_digest"],
+        "properties": {
+          "tool": { "type": "string" },
+          "args_digest": { "$ref": "#/$defs/digest", "description": "Hash of the arguments. Raw args never travel in the trace." },
+          "args_preview": { "type": ["string", "null"], "description": "Optional truncated/redacted preview for triage." },
+          "mediated_by": { "type": ["string", "null"], "description": "The gateway/policy point that mediated this call, when one did. A tool_call witnessed at a gateway is OBSERVED from a different trust domain than the agent's own claim." },
+          "authoritative_ref": { "$ref": "#/$defs/authoritative_ref" }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "delegation" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["from_agent", "to_agent"],
+        "properties": {
+          "from_agent": { "type": "string" },
+          "to_agent": { "type": "string" },
+          "on_behalf_of": { "type": ["string", "null"], "description": "The originating principal carried across the hop. Losing this is the delegation-completeness failure the portfolio measures." },
+          "delegation_ref": { "type": ["string", "null"], "description": "Pointer to the artifact that carries the authority - a token jti, an act-claim chain digest, an A2A task id." }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "retrieval" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["source", "content_trust"],
+        "properties": {
+          "source": { "type": "string", "description": "Where the content came from: index name, URL host, MCP resource uri." },
+          "content_trust": {
+            "type": "string",
+            "enum": ["trusted", "untrusted", "mixed", "unknown"],
+            "description": "Chain node 'input'. Indirect injection enters here; an untrusted retrieval that later reaches authorization_to_tool is the edge sequence detections care about."
+          },
+          "query_digest": { "$ref": "#/$defs/digest_or_null" },
+          "doc_count": { "type": ["integer", "null"] },
+          "doc_refs": { "type": "array", "items": { "type": "string" }, "description": "Stable ids of retrieved documents, so the injected item can be named after the fact." }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "plan" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["plan_digest"],
+        "properties": {
+          "plan_digest": { "$ref": "#/$defs/digest" },
+          "steps": { "type": ["integer", "null"] },
+          "goal_digest": { "$ref": "#/$defs/digest_or_null" },
+          "revision_of": { "type": ["string", "null"], "description": "span_id of the plan this one replaces. A plan that changes right after an untrusted retrieval is the goal-hijack signal." }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "memory" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["op", "store"],
+        "properties": {
+          "op": { "type": "string", "enum": ["read", "write", "update", "delete"] },
+          "store": { "type": "string" },
+          "key_digest": { "$ref": "#/$defs/digest_or_null" },
+          "content_trust": { "type": ["string", "null"], "enum": ["trusted", "untrusted", "mixed", "unknown", null], "description": "Memory is a persistence path for injected content across runs; a write of untrusted content is a cross-run edge." },
+          "bytes": { "type": ["integer", "null"] }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "token_event" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["op", "subject"],
+        "properties": {
+          "op": { "type": "string", "enum": ["issue", "exchange", "use", "deny"] },
+          "subject": { "type": "string", "description": "Identity the token was issued to." },
+          "audience": { "type": ["string", "null"], "description": "Resource the token is scoped for." },
+          "scopes": { "type": "array", "items": { "type": "string" } },
+          "on_behalf_of": { "type": ["string", "null"], "description": "Delegated principal, where the token carries one." },
+          "jti": { "type": ["string", "null"], "description": "Token id. The correlated_identifier that joins an agent's claim to the IdP's authoritative record." },
+          "decision": { "type": ["string", "null"], "enum": ["allow", "deny", "not_evaluated", null] },
+          "authoritative_ref": { "$ref": "#/$defs/authoritative_ref" }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "network_egress" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["dest"],
+        "properties": {
+          "dest": { "type": "string" },
+          "sni": { "type": ["string", "null"] },
+          "bytes": { "type": ["integer", "null"] },
+          "pid": { "type": ["integer", "null"], "description": "Owning process, when the sensor can attribute it. Absent pid is why host egress often cannot be tied to a specific agent." }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "process_spawn" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["pid", "binary"],
+        "properties": {
+          "pid": { "type": "integer" },
+          "ppid": { "type": ["integer", "null"] },
+          "binary": { "type": "string" },
+          "cmd_digest": { "$ref": "#/$defs/digest_or_null" }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "file_write" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string" },
+          "bytes": { "type": ["integer", "null"] },
+          "authoritative_ref": { "$ref": "#/$defs/authoritative_ref" }
+        }
+      } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "security_finding" } }, "required": ["kind"] },
+      "then": { "required": ["data"], "properties": { "data": {
+        "required": ["finding_type", "verdict"],
+        "properties": {
+          "finding_type": { "type": "string", "description": "e.g. 'prompt_injection', 'confused_deputy', 'excessive_agency', 'oos_token_use', 'claim_observed_divergence'." },
+          "verdict": { "type": "string", "enum": ["fired", "not_fired", "blocked"] },
+          "atlas_technique": { "type": ["string", "null"], "description": "MITRE ATLAS technique id, e.g. 'AML.T0051'." },
+          "severity": { "type": ["string", "null"], "enum": ["info", "low", "medium", "high", "critical", null] },
+          "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "span_ids of the events this finding is grounded in." },
+          "weakest_supporting_class": { "$ref": "#/$defs/evidence_class", "description": "The weakest evidence_class among evidence_refs. A finding is only as strong as its weakest supporting edge; carrying it here stops a chain of CLAIMED records from reading as proof." }
+        }
+      } } }
+    }
+  ]
+}

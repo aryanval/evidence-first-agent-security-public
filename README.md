@@ -19,6 +19,13 @@ dropping the provenance security needs.
 
 > **The model may stay probabilistic. The security boundary around it should become more provable than the model itself.**
 
+**The standards change this work argues for is filed as
+[`ocsf/ocsf-schema#1738`](https://github.com/ocsf/ocsf-schema/issues/1738)** —
+an optional `caused_by` on the `ai_operation` profile, so that a resource
+owner's record of a change can name the agent tool call it is attributed to.
+Filed without a co-sponsor; anyone who owns a resource-side audit record and
+would have to populate the attribute is exactly who it needs.
+
 ---
 
 ## What is in this repository
@@ -29,6 +36,7 @@ dropping the provenance security needs.
 | [`EXHIBIT-A.md`](EXHIBIT-A.md) | Two real records from one run, arguments redacted: a tool call and the platform's record of the change it caused, with the join visibly absent. |
 | [`vendor-matrix.md`](vendor-matrix.md) | Ten vendor products across six layers, every cell sourced to a dated document, every unanswered question marked *not established* rather than inferred. |
 | [`schemas/agent-trace-schema/`](schemas/agent-trace-schema/) | The evidence envelope: specification, JSON Schema, a dependency-free validator, and fixtures. |
+| [OCSF issue #1738](https://github.com/ocsf/ocsf-schema/issues/1738) | The schema change this work proposes, filed 24 August 2026. |
 | [`PROVENANCE.md`](PROVENANCE.md) | Commit hashes and dates proving the pre-registration existed before the runs. |
 | [`WITHHELD.md`](WITHHELD.md) | What is deliberately not published, and a SHA-256 manifest of it so the withheld tree can be shown unaltered later. |
 

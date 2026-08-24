@@ -10,7 +10,7 @@ SHA-256 of every file in the private repository that is **not** published
 here: **7,332 files**, of which **7,332** have their
 path redacted. Hashes and paths only — no contents.
 
-**Manifest root digest:** `9a94b03d7ec44316b8d468e1a3f8e8662607c5c7fbd4dd4baee2a9190df5198c`
+**Manifest root digest:** `b4f0e8ecd5516978fec31b820631963dcc6dd0393fe653af4121914af1c5e8db`
 
 The root digest is a SHA-256 over the sorted manifest below, so the entire
 withheld tree can be verified with a single comparison rather than several
@@ -7337,7 +7337,7 @@ e24f375ee373d11a51a27460d1835e1b43f580185d7286d4a019c03c294dff3d  redacted-7301
 e0d6a5ed8d72bb4aff44ac40d0d5087061547f2e2fabe8fbffc6ddff6f0c797e  redacted-7302
 41b874b89a5ee229680bcb223fb12301f522d4f82992dc25214ef4255adb3bde  redacted-7303
 1c1255845751a7166681af00705cbc59d04624dce50bb1516a332da4eaebe333  redacted-7304
-9ecfcaf02438277c4d548cbd0b94623cea44d535ee42752fb8913dedba2925fc  redacted-7305
+7d1012c0f1ecf7bec33b6d8454ca01e99666b62364c1b4e97cd918134dd9ae67  redacted-7305
 707e2faa74e36920d7e97cd9cf2f0dc0048c7d66777dfe528d8f0bcb6eb4a7fb  redacted-7306
 c8a3490a12c1717c35b2d54164f0b895afdaabf3b91be2804fed10c61be5c7bd  redacted-7307
 843a25e4daf64c42c745e30caab568e00e96612e69f002ea3137ba59cbbd2188  redacted-7308
@@ -7346,7 +7346,7 @@ c9b01ec982854d33f6caa887499a600b7f8757f26cdc52eeadb4b2f847eb5c52  redacted-7310
 a3becbad9e0568e9aecfd81e8f767d51205f42b14e1fa3597c18a0cf22d86f5c  redacted-7311
 91252620bf06c61920aa412775e3541b6c55d4c62c5c751a4eb926986f3412ec  redacted-7312
 faaf32aa3db68249f71d5f4d27a74fa54f846103201ae01911b3a0ac00306898  redacted-7313
-c248452033e950bde2ae3eefdabdac726d18877a73ed6e2895c36427759ba3ce  redacted-7314
+6529bd8137969dc3d0734154b2d30ac6e5ddbcb520093391d4abd193636d8dc5  redacted-7314
 3e211d0545f62a0b0f71ddd483bbd21ab8b6efd5e59d6a2cce01daf8eb5f35d0  redacted-7315
 0384a7d237950e95767f9f80e861d9b42ec0dee0721c05cbc38f79681152e2c7  redacted-7316
 60f4c81a291435a71855d9a244f794ee8576bf220a5b2f8a3c522e9c2ceb5aaf  redacted-7317

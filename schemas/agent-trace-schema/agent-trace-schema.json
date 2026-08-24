@@ -11,7 +11,7 @@
       "description": "Contract version this line speaks. 0.1 lines remain valid under this schema; see the 0.1 -> 0.2 delta in SPEC.md."
     },
     "ts": { "type": "string", "format": "date-time", "description": "RFC3339 UTC timestamp of the event." },
-    "producer": { "type": "string", "description": "Emitting component, e.g. 'agent-attack-range', 'valkyrie-edr', 'mcp-sidecar'. Legacy identifier; in 0.2 the authoritative answer to 'who says so' is observer_identity." },
+    "producer": { "type": "string", "description": "Emitting component, e.g. 'attack-range', 'host-sensor', 'mcp-sidecar'. Legacy identifier; in 0.2 the authoritative answer to 'who says so' is observer_identity." },
     "evidence": {
       "type": "string",
       "enum": ["claimed", "observed"],
@@ -125,7 +125,7 @@
       "type": "object",
       "required": ["id", "kind"],
       "properties": {
-        "id": { "type": "string", "description": "Stable identifier for the observer instance, e.g. 'valkyrie-edr@host-7'." },
+        "id": { "type": "string", "description": "Stable identifier for the observer instance, e.g. 'host-sensor@host-7'." },
         "kind": {
           "type": "string",
           "enum": [
@@ -204,7 +204,7 @@
       "required": ["value", "labeler"],
       "properties": {
         "value": { "type": "string", "enum": ["benign", "attack", "ambiguous", "not_labeled"] },
-        "labeler": { "type": "string", "description": "The harness that controls the scenario, e.g. 'agent-attack-range'." },
+        "labeler": { "type": "string", "description": "The harness that controls the scenario, e.g. 'attack-range'." },
         "scenario_id": { "type": ["string", "null"] },
         "expected_outcome": { "type": ["string", "null"], "enum": ["success", "failure", "blocked", "unknown", null] },
         "atlas_technique": { "type": ["string", "null"], "description": "MITRE ATLAS technique id, e.g. 'AML.T0051'." },

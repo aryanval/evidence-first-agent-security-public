@@ -489,17 +489,52 @@ one, and the only thing that crosses carries something else.
 
 ---
 
+---
+
+# Addendum — 2026-08-24 — the questions campaign 3 adds, and their status
+
+**Not yet examined. No vendor documentation was fetched for this addendum**, and
+nothing below is a finding. It is recorded now so the questions exist in writing
+before anyone goes looking for answers that flatter the thesis — the same reason
+the pre-registrations exist.
+
+Campaign 3 asks three things of a vendor record that the matrix above does not:
+
+| # | question | why campaign 3 raises it | status |
+|---|---|---|---|
+| P-4 | Does the record bind an action to an **earlier run** that caused it — not a parent span in the same trace, but a prior, completed execution? | An agent that writes to its own memory can instruct its own future. 60 runs, 0 traces naming the writer. | **not established** |
+| P-5 | Does the record distinguish *"no human authorised this"* from *"we did not write down who did"*? Is there a principal **type** and an **authentication method**, or only an optional identity string? | A scheduled chain reached a sensitive action with every control satisfied; an empty principal field and an honest `scheduled / none` are indistinguishable in most schemas. | **not established** |
+| P-6 | Is the correlation identifier minted **per call** or **per credential**? | Under a shared credential our own per-credential identifier stopped disambiguating — 0 ambiguous records sequentially, 40 of 166 concurrently. A vendor whose identifier is per-session or per-token inherits the same failure. | **not established** |
+
+**P-6 is the one most likely to change a conclusion in the matrix above.** Several
+products there were credited with carrying a correlation identifier. That credit
+was given without asking at what granularity the identifier is minted, and
+campaign 3 shows the granularity is the whole question: an identifier that
+survives one call and not two concurrent ones is not the mechanism the matrix
+assumed it was. **Any re-examination should re-open those cells first**, and it
+should be done knowing it may narrow the claim against this project's own
+interest — which is how the last two rounds of this document went.
+
+The existing verdicts are unchanged by this addendum. Nothing above is retracted;
+three questions are added and marked unanswered.
+
+---
+
 ## Version
 
-**`2026-08-23-c2-complete`** · campaign tag `c2` · pre-registration frozen at
-`14dad5f` (`preregistration-c2`) · corpus `corpus/confirmatory-c2/` —
-**360 runs scored once: 240 attack, 120 utility.**
+**`2026-08-24-c3-complete`** · vendor verdicts unchanged since `c2`, with three
+questions added and marked unanswered in the 2026-08-24 addendum above.
 
-Snapshot and manifest: `golden-attack/versions/2026-08-23-c2-complete/`, which
+The matrix's evidence base remains the documentation fetched **2026-08-23**. A
+verdict of "no standard/product defines this" is defensible only for as long as
+the cited version says what it says, so the dates above are load-bearing rather
+than decorative.
+
+Snapshot and manifest: `golden-attack/versions/2026-08-24-c3-complete/`, which
 records repo HEAD, this file's sha256, the corpus window, and the last ledger row
 of every stage.
 
 This document describes that campaign state and no other. The stamp is here
-because the campaign carries no identifier of its own — `c2` in a run-id prefix is
+because the campaign carries no identifier of its own — `c3` in a run-id prefix is
 the only one — so a copy of this file found on its own could otherwise not say
 which run produced it. Campaign 1 is void and never scored.

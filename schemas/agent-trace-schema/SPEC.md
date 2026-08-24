@@ -325,7 +325,7 @@ into constructs the validator silently fails to check.
   `args_digest` (algorithm-prefixed, e.g. `sha256:…`). `args_preview` is
   optional, truncated, and redactable.
 - Digests over raw payloads keep the stream small and safe to publish, and let
-  `ocsf-agent-telemetry` benchmark encoding without leaking content.
+  normalizer benchmark encoding without leaking content.
 - Signatures never travel inline: `integrity_status.signature_ref` points at a
   detached signature or transparency-log entry.
 
@@ -335,12 +335,12 @@ into constructs the validator silently fails to check.
 
 | Repo | Role | Emits | Consumes |
 |---|---|---|---|
-| **agent-attack-range** | ground truth | `agent_run_start`/`end`, `retrieval`, `plan`, `model_call`, `tool_call`, `delegation`, `token_event`, `security_finding`; the only producer permitted to set `ground_truth_label` | — |
-| **VALkyrie / localEDR** | corroboration | `process_spawn`, `network_egress`, `file_write` (`OBSERVED`, `host-kernel`); `model_call`/`tool_call` (`CLAIMED`, via sidecar, `agent-process`) — and `declared_blind_spots` on both | — |
-| **ocsf-agent-telemetry** | normalization | OCSF events + Sigma verdicts; scores per-field retention of the eight properties | all `kind`s, from **multiple** producers |
-| **cyberAgentGraph** | capability vs. reality | — | `agent.identity_ref`, `agent.instance_id`, `delegation`, `token_event` to confirm graph edges and mark them exercised |
+| **attack range** | ground truth | `agent_run_start`/`end`, `retrieval`, `plan`, `model_call`, `tool_call`, `delegation`, `token_event`, `security_finding`; the only producer permitted to set `ground_truth_label` | — |
+| **host sensor** | corroboration | `process_spawn`, `network_egress`, `file_write` (`OBSERVED`, `host-kernel`); `model_call`/`tool_call` (`CLAIMED`, via sidecar, `agent-process`) — and `declared_blind_spots` on both | — |
+| **normalizer** | normalization | OCSF events + Sigma verdicts; scores per-field retention of the eight properties | all `kind`s, from **multiple** producers |
+| **capability graph** | capability vs. reality | — | `agent.identity_ref`, `agent.instance_id`, `delegation`, `token_event` to confirm graph edges and mark them exercised |
 
-The two trust domains VALkyrie spans are the reason it can find anything: its
+The two trust domains the host sensor spans are the reason it can find anything: its
 sidecar records are `agent-process`/`CLAIMED` and its host records are
 `host-kernel`/`OBSERVED`, so the corroboration rule in §4 is satisfied and a
 divergence between them is a real finding (`claim_observed_divergence`) rather
